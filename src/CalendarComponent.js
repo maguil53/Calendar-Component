@@ -24,7 +24,7 @@ class CalendarComponent extends React.Component {
     }
     
     componentDidMount() {
-        axios.get('https://www.googleapis.com/calendar/v3/calendars/acm.calstatela@gmail.com/events?singleEvents=true&orderBy=startTime&key=AIzaSyDGuNUOIbfmjWtUg5lexVuaFRgKrtAg2zQ')
+        axios.get('https://www.googleapis.com/calendar/v3/calendars/acm.calstatela@gmail.com/events?singleEvents=true&orderBy=startTime&key=' + key.API_KEY)
             .then(res => {
                 const events = this.state.events; // Empty object at first
 
