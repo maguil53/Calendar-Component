@@ -1,6 +1,13 @@
 import React from 'react';
 import './Calendar.css';
 import axios from 'axios';
+import key from './key';
+
+/**
+ * Note: Google Calendar only return 250 events (not sure if we can get more or not yet).
+ * So either return more results, make another result after reaching the threshold, or 
+ * just make the startTime request a couple months before the current date.
+ */
 
 class CalendarComponent extends React.Component {
     
@@ -15,8 +22,68 @@ class CalendarComponent extends React.Component {
         this.incrementMonth = this.incrementMonth.bind(this);
         this.decrementMonth = this.decrementMonth.bind(this);
     }
+    
+    componentDidMount() {
+        axios.get('https://www.googleapis.com/calendar/v3/calendars/acm.calstatela@gmail.com/events?singleEvents=true&orderBy=startTime&key=AIzaSyDGuNUOIbfmjWtUg5lexVuaFRgKrtAg2zQ')
+            .then(res => {
+                const events = this.state.events; // Empty object at first
+
+                /**
+                 * This is how I'm storing my events. Yes, I know there's
+                 * probably a better way to do this. It's 2:30am.
+                 * 
+                 * {
+                 *      2019-01-01: {
+                 *            events: [events]
+                 *      },
+                 *      2019-02-02 {
+                 *            events: [events]
+                 *      }
+                 * }
+                 */
+
+                for(let i = 0; i < res.data.items.length; i++) {
+                    let currentUTC = '';
+                    let previousUTC = '';
+                    
+                    
+                    
+                    // This handles whether the json object has "dateTime" or "date"
+                    if(res.data.items[i].start.hasOwnProperty("dateTime")) {
+                        currentUTC = res.data.items[i].start.dateTime.slice(0, 10);
+                    } else {
+                        // Else it has start.date
+                        currentUTC = res.data.items[i].start.date.slice(0, 10);
+                    }
+
+                    // Comparing currentUTC and previousUTC to see if the events
+                    // belong to the same month.
+                    if(i > 0) {
+                        if(res.data.items[i - 1].start.hasOwnProperty("dateTime")) {
+                            previousUTC = res.data.items[i - 1].start.dateTime.slice(0, 10);
+                        } else {
+                            previousUTC = res.data.items[i - 1].start.date.slice(0, 10);
+                        }
+                    }
+
+   
+                    // Compare, if the same, then we can simply push onto list
+                    // if NOT the same, create!
+                    if(currentUTC == previousUTC) {
+                        events[currentUTC].push(res.data.items[i]);
+                    } else {
+                        events[currentUTC] = [res.data.items[i]];
+                    }
+
+                }
 
 
+                this.setState({
+                    events: events,
+                });
+
+            });
+    }
 
     
     /**
@@ -68,6 +135,49 @@ class CalendarComponent extends React.Component {
         });
     }
 
+    getEvents(cellNumber) {
+        const calendarYear = this.state.currentDate.getFullYear();
+        const calendarMonth = this.state.currentDate.getMonth();
+    
+        const cellDate = new Date(calendarYear, calendarMonth, cellNumber);
+
+
+        let yearString = (cellDate.getFullYear()).toString();
+        let monthString = (cellDate.getMonth() + 1).toString();
+        let dayString = (cellDate.getDate()).toString();
+
+        if(monthString.length == 1) {
+            monthString = "0" + monthString;
+        }
+        
+        if(dayString.length == 1) {
+            dayString = "0" + dayString;
+        }
+
+
+
+        const events = this.state.events;
+
+        const cellKey = yearString + "-" + monthString + "-" + dayString;
+        
+        
+        // console.log(events[yearString + "-" + monthString + "-" + dayString]);
+        // let test = yearString + "-" + monthString;
+        const eventsInDate = events[cellKey];
+
+        
+        let listOfParagraphs = [];
+        if(typeof eventsInDate !== "undefined") {
+            for(let i = 0; i < eventsInDate.length; i++) {
+                // console.log(eventsInDate[i].summary);
+                listOfParagraphs.push(
+                    <p>{eventsInDate[i].summary}</p>
+                );
+            }
+        } 
+        return listOfParagraphs;
+    }
+
     render() {
         let calendar = [];
 
@@ -97,44 +207,35 @@ class CalendarComponent extends React.Component {
             // about indices when adding these elements to "calendar"
             let rowCells = [];
             for(let j = 0; j < 7; j++) {
-                // Should be 7
+
                 if(i == 0 && firstDayDate.getDay() <= j) {
                     // Going to add conditional styling. If the cell
                     // is the current date, we will light it up
                     rowCells.push(
                         <div className={"cell" + (this.isCurrentDate(dayCount) ? ' today' : '')}>
                             <div className="day-number">{dayCount}</div>
-                            <div className="event-button">Test</div>
-                            
+                            <div className="event-button">{this.getEvents(dayCount)}</div>
                         </div>);
 
                     dayCount++;
                 } else if(i == (weekCount - 1) && lastDayDate.getDay() < j) {
-                    // I think we can get rid of the two child divs, they kind of do nothing
-                    rowCells.push(
-                        <div className="cell">
-                            
-                            <div className="day-number"></div>
-                            <div className="event-button">Test</div>
-                            
-                        </div>);
+                    // This block takes care of the empty cells after last day of month
+                    rowCells.push(<div className="cell"></div>);
+
                 } else if (i > 0) {
                     // Going to add conditional styling
                     // is the current date, we will light it up
                     rowCells.push(
                         <div className={"cell" + (this.isCurrentDate(dayCount) ? ' today' : '')}>
                             <div className="day-number">{dayCount}</div>
-                            <div className="event-button">Test</div>
+                            <div className="event-button">{this.getEvents(dayCount)}</div>
                             
                         </div>);
 
                     dayCount++;
                 } else {
-                    rowCells.push(
-                        <div className="cell">
-                            <div className="day-number"></div>
-                            <div className="event-button">Test</div>
-                        </div>);
+                    // This block takes care of the empty cells before the 1st of month
+                    rowCells.push(<div className="cell"></div>);
                 }
                 
             }
