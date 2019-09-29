@@ -2,11 +2,17 @@ import React from 'react';
 import './Calendar.css';
 import axios from 'axios';
 import key from './key';
+// FOr some reason, adding this line fixes my issues with react-bootstrap (ask Emily)
+import 'bootstrap/dist/css/bootstrap.css';
+
+import EventModal from './EventModal';
 
 /**
- * Note: Google Calendar only return 250 events (not sure if we can get more or not yet).
- * So either return more results, make another result after reaching the threshold, or 
- * just make the startTime request a couple months before the current date.
+ * Note: -Google Calendar only return up to 2500 events.
+ * 
+ *       -Not all events have "description" or "location"
+ *       -Maybe location or description can contain a link to the
+ *        poster image or RSVP link.
  */
 
 class CalendarComponent extends React.Component {
@@ -23,8 +29,8 @@ class CalendarComponent extends React.Component {
         this.decrementMonth = this.decrementMonth.bind(this);
     }
     
-    componentDidMount() {
-        axios.get('https://www.googleapis.com/calendar/v3/calendars/acm.calstatela@gmail.com/events?singleEvents=true&orderBy=startTime&key=' + key.API_KEY)
+    componentDidMount() {        
+        axios.get('https://www.googleapis.com/calendar/v3/calendars/m9es8vqqn5rqmrrnfr4g4s6adc@group.calendar.google.com/events?singleEvents=true&orderBy=startTime&timeMin=2019-01-01T10:00:00-07:00&key=' + key.API_KEY)
             .then(res => {
                 const events = this.state.events; // Empty object at first
 
@@ -165,17 +171,23 @@ class CalendarComponent extends React.Component {
         // let test = yearString + "-" + monthString;
         const eventsInDate = events[cellKey];
 
+        // return eventsInDate;
+
         
-        let listOfParagraphs = [];
-        if(typeof eventsInDate !== "undefined") {
-            for(let i = 0; i < eventsInDate.length; i++) {
-                // console.log(eventsInDate[i].summary);
-                listOfParagraphs.push(
-                    <p>{eventsInDate[i].summary}</p>
+        // Create a list of EventModals
+        // then return them
+
+        let listOfEventModals = [];
+
+        if(typeof(eventsInDate) !== "undefined") {
+            for(let i = 0; i < eventsInDate.length; i++) {                
+                listOfEventModals.push(
+                    <EventModal event={eventsInDate[i]}/>
                 );
             }
-        } 
-        return listOfParagraphs;
+        }
+
+        return listOfEventModals;
     }
 
     render() {
@@ -214,27 +226,29 @@ class CalendarComponent extends React.Component {
                     rowCells.push(
                         <div className={"cell" + (this.isCurrentDate(dayCount) ? ' today' : '')}>
                             <div className="day-number">{dayCount}</div>
-                            <div className="event-button">{this.getEvents(dayCount)}</div>
+                            {this.getEvents(dayCount)}
+                            {/* <EventModal className="event-modal" events={this.getEvents(dayCount)}/> */}
                         </div>);
 
                     dayCount++;
                 } else if(i == (weekCount - 1) && lastDayDate.getDay() < j) {
                     // This block takes care of the empty cells after last day of month
+                    // DO NOT increment dayCount
                     rowCells.push(<div className="cell"></div>);
-
                 } else if (i > 0) {
                     // Going to add conditional styling
                     // is the current date, we will light it up
                     rowCells.push(
                         <div className={"cell" + (this.isCurrentDate(dayCount) ? ' today' : '')}>
                             <div className="day-number">{dayCount}</div>
-                            <div className="event-button">{this.getEvents(dayCount)}</div>
-                            
+                            {this.getEvents(dayCount)}
+                            {/* <EventModal className="event-modal" events={this.getEvents(dayCount)}/> */}
                         </div>);
 
                     dayCount++;
                 } else {
                     // This block takes care of the empty cells before the 1st of month
+                    // DO NOT increment dayCount
                     rowCells.push(<div className="cell"></div>);
                 }
                 
@@ -244,14 +258,16 @@ class CalendarComponent extends React.Component {
         }   
 
         return(
-            <div>
+            <div className="calendar-container">
+
                 <button className="prev-button" onClick={this.decrementMonth}>Prev</button>
                 <button onClick={this.incrementMonth}>Next</button>
                 
                 <div style={{color: 'white'}}>
                     {months[monthIndex]} {this.state.currentDate.getFullYear()}
                 </div>
-                
+
+
                 <div className="day-header-container">
                     <div className="day-header">Sun</div>
                     <div className="day-header">Mon</div>
