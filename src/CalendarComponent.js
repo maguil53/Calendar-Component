@@ -28,9 +28,22 @@ class CalendarComponent extends React.Component {
         this.incrementMonth = this.incrementMonth.bind(this);
         this.decrementMonth = this.decrementMonth.bind(this);
     }
+
+
+    /**
+     * TO-DO: Get timeMin parameter from the current date that the user is on.
+     *        We will always go back one year.
+     *        Do NOT use currentDate, since this will always be updated when
+     *        he/she is navigating through the calendar. Not sure if this will
+     *        affect the API call but better to be safe.
+     */
     
-    componentDidMount() {        
-        axios.get('https://www.googleapis.com/calendar/v3/calendars/m9es8vqqn5rqmrrnfr4g4s6adc@group.calendar.google.com/events?singleEvents=true&orderBy=startTime&timeMin=2019-01-01T10:00:00-07:00&key=' + key.API_KEY)
+    componentDidMount() {
+        // Using year before to set timeMin in query
+        const yearBefore = new Date(new Date().setFullYear(new Date().getFullYear() - 1));
+        let timeMin = this.ISODateString(yearBefore);
+
+        axios.get('https://www.googleapis.com/calendar/v3/calendars/m9es8vqqn5rqmrrnfr4g4s6adc@group.calendar.google.com/events?singleEvents=true&orderBy=startTime&maxResults=2000&timeMin=' + timeMin + '&key=' + key.API_KEY)
             .then(res => {
                 const events = this.state.events; // Empty object at first
 
@@ -89,6 +102,18 @@ class CalendarComponent extends React.Component {
                 });
 
             });
+    }
+
+    /* use a function for the exact format desired... */
+    ISODateString(d){
+        function pad(n){return n<10 ? '0'+n : n}
+
+        return d.getUTCFullYear()+'-'
+            + pad(d.getUTCMonth()+1)+'-'
+            + pad(d.getUTCDate())+'T'
+            + pad(d.getUTCHours())+':'
+            + pad(d.getUTCMinutes())+':'
+            + pad(d.getUTCSeconds())+'Z'
     }
 
     
